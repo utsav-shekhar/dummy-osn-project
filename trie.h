@@ -11,7 +11,7 @@
 
 typedef struct TrieNode
 {
-    struct TrieNode *children[26]; // Assuming English alphabet
+    struct TrieNode *children[260]; // Assuming English alphabet
     int isEndOfWord;
     int port;
 } TrieNode;
@@ -21,7 +21,7 @@ TrieNode *createNode()
     TrieNode *node = (TrieNode *)malloc(sizeof(TrieNode));
     if (node)
     {
-        for (int i = 0; i < 26; i++)
+        for (int i = 0; i < 260; i++)
         {
             node->children[i] = NULL;
         }
@@ -30,24 +30,42 @@ TrieNode *createNode()
     return node;
 }
 
-// Function to insert a string into the trie
-void insertTrie(TrieNode *root, char *word, int ports)
-{
+// // Function to insert a string into the trie
+// void insertTrie(TrieNode *root, char *word, int ports)
+// {
+//     TrieNode *current = root;
+
+//     // printf("the assigned port : %d\n", ports);
+//     for (int i = 0; word[i] != '\0'; i++)
+//     {
+//         int index = tolower((unsigned char)word[i]) - 'a';
+
+//         if (index < 0 || index >= 26)
+//         {
+//             // fprintf(stderr, "Invalid character in the word: %c\n", word[i]);
+//             return;
+//         }
+
+//         if (!current->children[index])
+//         {
+//             current->children[index] = createNode();
+//         }
+
+//         current = current->children[index];
+//     }
+
+//     current->isEndOfWord = 1;
+//     current->port = ports;
+//     // printf("Inserted word: %s\n", word);
+// }
+
+void insertTrie(TrieNode *root, char *word, int ports) {
     TrieNode *current = root;
 
-    // printf("the assigned port : %d\n", ports);
-    for (int i = 0; word[i] != '\0'; i++)
-    {
-        int index = tolower((unsigned char)word[i]) - 'a';
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = (int)word[i];
 
-        if (index < 0 || index >= 26)
-        {
-            // fprintf(stderr, "Invalid character in the word: %c\n", word[i]);
-            return;
-        }
-
-        if (!current->children[index])
-        {
+        if (!current->children[index]) {
             current->children[index] = createNode();
         }
 
@@ -56,8 +74,8 @@ void insertTrie(TrieNode *root, char *word, int ports)
 
     current->isEndOfWord = 1;
     current->port = ports;
-    // printf("Inserted word: %s\n", word);
 }
+
 
 int removeTrie(TrieNode *root, char *word, int depth)
 {
@@ -129,30 +147,84 @@ int removeTrie(TrieNode *root, char *word, int depth)
     return 0; // Word not found
 }
 // Function to search for a string in the trie
-int searchTrie(TrieNode *root, char *word)
-{
+// int searchTrie(TrieNode *root, char *word)
+// {
+//     TrieNode *current = root;
+//     for (int i = 0; word[i] != '\0'; i++)
+//     {
+//         int index = word[i] - 'a';
+//         if (!current->children[index])
+//         {
+//             return 0; // Word not found
+//         }
+//         current = current->children[index];
+//     }
+//     // if()
+//     printf("current ka port: %d\n", current->port);
+//     if ((current != NULL && current->isEndOfWord))
+//     {
+
+//         return current->port;
+//     }
+//     else
+//     {
+//         return 0;
+//     }
+// }
+
+// int searchTrie(TrieNode *root, char *word)
+// {
+//     TrieNode *current = root;
+
+//     for (int i = 0; word[i] != '\0'; i++)
+//     {
+//         int index = (int)word[i]; // Get ASCII value of the character
+        
+//         if (!current->children[index])
+//         {
+//             return 0; // Word not found
+//         }
+//         current = current->children[index];
+//     }
+
+//     if (current != NULL && current->isEndOfWord)
+//     {
+//         return current->port;
+//     }
+//     else
+//     {
+//         return 0;
+//     }
+// }
+
+#define ALPHABET_SIZE 128 // Assuming ASCII characters, adjust as needed
+
+int searchTrie(TrieNode *root, char *word) {
     TrieNode *current = root;
-    for (int i = 0; word[i] != '\0'; i++)
-    {
-        int index = word[i] - 'a';
-        if (!current->children[index])
-        {
+
+    for (int i = 0; word[i] != '\0'; i++) {
+        int index = (int)word[i]; // Get ASCII value of the character
+        if (index >= ALPHABET_SIZE || index < 0) {
+            // Handle special characters or out-of-range characters
+            // For special characters or non-ASCII characters, take additional steps
+            // You might consider using a different indexing mechanism for such characters
+            // Here, returning 0 as word not found for non-ASCII characters
+            return 0;
+        }
+
+        if (!current->children[index]) {
             return 0; // Word not found
         }
         current = current->children[index];
     }
-    // if()
-    printf("current ka port: %d\n", current->port);
-    if ((current != NULL && current->isEndOfWord))
-    {
 
+    if (current != NULL && current->isEndOfWord) {
         return current->port;
-    }
-    else
-    {
+    } else {
         return 0;
     }
 }
+
 
 // Function to free the memory allocated for the trie
 void freeTrie(TrieNode *root)
