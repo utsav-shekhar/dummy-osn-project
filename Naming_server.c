@@ -32,7 +32,7 @@ typedef struct
   char ip[24];
   int NM_port;
   int client_port;
-  char paths[5][1024];
+  char paths[5][4024];
   int num_paths;
 } SS;
 
@@ -172,17 +172,14 @@ void getAllFilesRecursively(const char *currentDir, const char *parentDir, char 
     perror("Unable to open directory");
   }
 }
+
 char **getFilesInDirectoryRecursively(const char *dirPath, int *numFiles)
 {
   char **files = NULL;
   int count = 0;
   int maxFiles = MAX_FILES;
   files = (char **)malloc(maxFiles * sizeof(char *));
-  char currentDir[PATH_MAX];
-  if (getcwd(currentDir, sizeof(currentDir)) == NULL){
-    perror("getcwd() error");
-    exit(EXIT_FAILURE);}
-  getAllFilesRecursively(currentDir, dirPath, &files, &count, &maxFiles);
+  getAllFilesRecursively(dirPath, dirPath, &files, &count, &maxFiles);
   *numFiles = count;
   return files;
 }
