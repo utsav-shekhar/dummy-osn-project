@@ -1,1 +1,2 @@
 nice read successfully at 8000 port
+Copied gpt to nice successfully at 8973 port

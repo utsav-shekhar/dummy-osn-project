@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include "trie.h"
 #include "convenience.h"
+
 sem_t x, y;
 pthread_t tid;
 pthread_t writerthreads[100];
@@ -20,6 +21,7 @@ int portnum = -1;
 int backupport = -1;
 char *directory = NULL;
 char *backup = NULL;
+
 #define ERROR_OPENING_FILE 1
 #define ERROR_CREATING_FILE 2
 #define ERROR_DELETING_FILE 3
@@ -32,7 +34,7 @@ typedef struct
   char ip[24];
   int NM_port;
   int client_port;
-  char paths[5][4024];
+  char paths[5][1024];
   int num_paths;
 } SS;
 
@@ -127,60 +129,48 @@ void insertIntoCircularArray(char client_command[1024], int port)
   }
 }
 
-void getAllFilesRecursively(const char *currentDir, const char *parentDir, char ***files, int *numFiles, int *maxFiles)
+char **getFilesInDirectory(const char *dirPath, int *numFiles)
 {
   DIR *dir;
   struct dirent *ent;
-  if ((dir = opendir(currentDir)) != NULL)
+  char **files = NULL;
+  int count = 0;
+
+  // Open the directory
+  if ((dir = opendir(dirPath)) != NULL)
   {
+    // Allocate memory for the array of strings
+    files = (char **)malloc(MAX_FILES * sizeof(char *));
+
+    // Read directory entries
     while ((ent = readdir(dir)) != NULL)
     {
       if (ent->d_type == DT_REG)
-      {
-        size_t relativePathLen = strlen(currentDir) - strlen(parentDir);
-        const char *separator = (currentDir[strlen(currentDir) - 1] == '/') ? "" : "/";
-        char sanitizedFilename[strlen(ent->d_name) + 1];
-        strcpy(sanitizedFilename, ent->d_name);
-        char *filename = sanitizedFilename;
-        while (*filename)
+      { // Check if it's a regular file
+        // Allocate memory for the file name
+        files[count] = (char *)malloc(strlen(ent->d_name) + 1);
+        strcpy(files[count], ent->d_name);
+        count++;
+
+        // Check if we've reached the maximum number of files
+        if (count >= MAX_FILES)
         {
-          if (*filename == '/')
-            *filename = '_';
-          filename++;
+          break;
         }
-        const char *adjustedCurrentDir = (currentDir[strlen(currentDir) - 1] == '/') ? currentDir + 1 : currentDir;
-        (*files)[*numFiles] = (char *)malloc(relativePathLen + strlen(separator) + strlen(sanitizedFilename) + 1);
-        sprintf((*files)[*numFiles], "%s%s%s", adjustedCurrentDir + strlen(parentDir), separator, sanitizedFilename);
-        (*numFiles)++;
-        if (*numFiles >= *maxFiles)
-        {
-          *maxFiles *= 2;
-          *files = (char **)realloc(*files, *maxFiles * sizeof(char *));
-        }
-      }
-      else if (ent->d_type == DT_DIR && strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0)
-      {
-        char nextDirPath[strlen(currentDir) + strlen(ent->d_name) + 2];
-        sprintf(nextDirPath, "%s/%s", currentDir, ent->d_name);
-        getAllFilesRecursively(nextDirPath, parentDir, files, numFiles, maxFiles);
       }
     }
+
+    // Close the directory
     closedir(dir);
   }
   else
   {
     perror("Unable to open directory");
   }
-}
 
-char **getFilesInDirectoryRecursively(const char *dirPath, int *numFiles)
-{
-  char **files = NULL;
-  int count = 0;
-  int maxFiles = MAX_FILES;
-  files = (char **)malloc(maxFiles * sizeof(char *));
-  getAllFilesRecursively(dirPath, dirPath, &files, &count, &maxFiles);
+  // Set the number of files
   *numFiles = count;
+
   return files;
 }
 
@@ -207,7 +197,6 @@ void executeCommand(int commandID, char *filePath, char *destinationPath, int so
   {
   case 1: // Create file command
     if (stat(new_filepath, &path_stat) != 0 && searchTrie(root, filePath) != 0)
-    // if (stat(new_filepath, &path_stat) != 0 )
     {
       // File or directory doesn't exist, proceed to create
       if (new_filepath[strlen(new_filepath) - 1] == '/')
@@ -297,9 +286,6 @@ void executeCommand(int commandID, char *filePath, char *destinationPath, int so
     }
     else
     {
-      // printf("%d\n",stat(new_filepath, &path_stat));
-      printf("search trie : %d\n", searchTrie(root, filePath));
-      printf("path %s", filePath);
       char *resp_msg = "104: File/Directory already exists!";
       send(sock, resp_msg, strlen(resp_msg), 0);
       printf("File or directory already exists!\n");
@@ -406,15 +392,12 @@ void *server_command_execute(void *new_socket)
 
   // update_tries(buffer);
 
-  fileList = getFilesInDirectoryRecursively(buffer, &numFiles);
+  fileList = getFilesInDirectory(buffer, &numFiles);
   // printf("%d\n", numFiles);
   for (int i = 0; i < numFiles; ++i)
   {
-    char a[2048] = ".";
-    strcat(a, fileList[i]);
-    printf("%s\n", a);
-
-    insertTrie(root, a, portnum);
+    // printf("%s\n", fileList[i]);
+    insertTrie(root, fileList[i], portnum);
     // printf("Inserted %d\n", i + 1);
   }
 
